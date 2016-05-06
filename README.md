@@ -8,10 +8,12 @@ For a quick start, check out the demos at http://greeninfo-network.github.io/L.T
 
 Usage is almost exactly like a typical L.TileLayer, except for a few additional options.
 
+    // after tiles load, any pure red (255,0,0) tiles will be replaced with black
+    // any other colors will be filled with white at 1/4 opacity
     var filtered = L.tileLayerPixelFilter('https://mapbox-or-something/tiles/{z}/{x}/{y}.png', {
-        matchRGBA: [ 255,  0,  0, 128 ],
-        missRGBA:  [ 0, 0, 0, 0 ],
-        pixelCodes: [ [255,0,2] ]
+        matchRGBA: [ 0,  0,  0, 255  ],
+        missRGBA:  [ 255, 255, 255, 64 ],
+        pixelCodes: [ [255, 0, 0] ]
     }).addTo(MAP);
 
 * **pixelCodes** -- Specify which RGB codes you want to match. See *setPixelCodes()* for more details.
