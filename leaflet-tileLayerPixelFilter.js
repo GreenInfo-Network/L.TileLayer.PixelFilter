@@ -1,25 +1,7 @@
 /*
- * a L.TileLayer which will, after a tile is loaded, swap out pixels so as ot modify the tiles
- * This works with data that is classified such that the RGB code can definitely link to a "class" of data that one may want to highlight or suppress.
- * Example: if forest is RGB code 66,255,66 then applying layer.setPixelCodes([ [66,255,66] ]) would cause all non-forest pixels to be blanked out
- * and all forest tiles to remain visible
- *
- * Params, additional to standard L.TileLayer parameters:
- * matchRGBA  see setMatchRGBA for details
- *           default: red at half opacity
- * missRGBA  see setMissRGBA for details
- *           default: transparent white and thus invisible
- * pixelCodes
- *           default: empty set [] so all pixels are selected
- *
- * Methods:
- * setPixelCodes([ [r,g,b], [r,g,b], [r,g,b], ... ])
- * setMatchRGBA([ r, g, b, a ])
- *           the RGBA code that will be applied to pixels which are on the provided list
- * setMissRGBA([ r, g, b, a ])
- *           the RGBA code that will be applied to non-matching pixels
- *
- * With a little creativity, one can treat the setPixelCodes() as if it were inverted, e.g. give matching pixels the RGBA code 255/255/255/0 so they are invisible and those which DO NOT match could get 255/0/0/128 for a 50% red fill
+ * L.TileLayer.PixelFilter
+ * https://github.com/greeninfo/L.TileLayer.PixelFilter
+ * http://greeninfo-network.github.io/L.TileLayer.PixelFilter/
  */
 L.tileLayerPixelFilter = function (url, options) {
     return new L.TileLayer.PixelFilter(url, options);
