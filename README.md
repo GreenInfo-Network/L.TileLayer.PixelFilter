@@ -41,4 +41,3 @@ Set the RGBA code that will be applied to non-matching pixels.
 
         gdalwarp -t_srs esg:3857 -r near input.tif output.tif
         gdal2tiles.py -r near input.tif tiles
-
