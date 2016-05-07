@@ -28,10 +28,14 @@ Define what RGB pixels are considered "matching". The tiles will then be re-eval
 
 Set the RGBA code that will be applied to pixels which are on the provided list.
 
+The value **null** may be given, to indicate that the existing pixel value should be preserved.
+
 
 **setMissRGBA([r,g,b,a])**
 
 Set the RGBA code that will be applied to non-matching pixels.
+
+The value **null** may be given, to indicate that the existing pixel value should be preserved.
 
 # Tips
 
