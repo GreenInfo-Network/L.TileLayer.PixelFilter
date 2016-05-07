@@ -26,6 +26,10 @@ Usage is almost exactly like a typical L.TileLayer, except for a few additional 
 
 Define what RGB pixels are considered "matching". The tiles will then be re-evaluated and pixels will be reassigned the new matching or non-matching color based on this new list.
 
+An empty set of pixel codes *setPixelCodes([])* will results in all pixels being considered a match.
+
+You can specify an impossible set of RGB codes such as *setPixelCodes([ [-1,-1,-1] ])* to make sure that no pixel can match.
+
 **setMatchRGBA([r,g,b,a])**
 
 Set the RGBA code that will be applied to pixels which are on the provided list.
