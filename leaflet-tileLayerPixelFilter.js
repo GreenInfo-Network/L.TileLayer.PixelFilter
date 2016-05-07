@@ -12,8 +12,8 @@ L.TileLayer.PixelFilter = L.TileLayer.extend({
     // then adds the all-important 'tileload' event handler which basically "detects" an unmodified tile and performs the pxiel-swap
     initialize: function (url, options) {
         options = L.extend(L.TileLayer.prototype.options, {
-            matchRGBA: [ 255, 0, 0, 128 ],
-            missRGBA: [ 0, 0, 0, 0 ],
+            matchRGBA: null,
+            missRGBA: null,
             pixelCodes: []
         }, options);
         L.TileLayer.prototype.initialize.call(this, url, options);
@@ -33,7 +33,7 @@ L.TileLayer.PixelFilter = L.TileLayer.extend({
     // settings setters
     setMatchRGBA: function (rgba) {
         // save the setting
-        if (typeof rgba !== 'object' || typeof rgba.length !== 'number' || rgba.length !== 4) throw "L.TileLayer.PixelSwap expected matchRGBA to be RGBA [r,g,b,a] array";
+        if (rgba !== null && (typeof rgba !== 'object' || typeof rgba.length !== 'number' || rgba.length !== 4) ) throw "L.TileLayer.PixelSwap expected matchRGBA to be RGBA [r,g,b,a] array or else null";
         this.options.matchRGBA = rgba;
 
         // force a redraw, which means new tiles, which mean new tileload events; the circle of life
@@ -41,7 +41,7 @@ L.TileLayer.PixelFilter = L.TileLayer.extend({
     },
     setMissRGBA: function (rgba) {
         // save the setting
-        if (typeof rgba !== 'object' || typeof rgba.length !== 'number' || rgba.length !== 4) throw "L.TileLayer.PixelSwap expected missRGBA to be RGBA [r,g,b,a] array";
+        if (rgba !== null && (typeof rgba !== 'object' || typeof rgba.length !== 'number' || rgba.length !== 4) ) throw "L.TileLayer.PixelSwap expected missRGBA to be RGBA [r,g,b,a] array or else null";
         this.options.missRGBA = rgba;
 
         // force a redraw, which means new tiles, which mean new tileload events; the circle of life
@@ -78,8 +78,13 @@ L.TileLayer.PixelFilter = L.TileLayer.extend({
         var output = context.createImageData(width, height);
 
         // extract out our RGBA trios into separate numbers, so we don't have to use rgba[i] a zillion times
-        var match_r = this.options.matchRGBA[0], match_g = this.options.matchRGBA[1], match_b = this.options.matchRGBA[2], match_a = this.options.matchRGBA[3];
-        var miss_r  = this.options.missRGBA[0], miss_g  = this.options.missRGBA[1], miss_b  = this.options.missRGBA[2], miss_a  = this.options.missRGBA[3];
+        var matchRGBA = this.options.matchRGBA, missRGBA = this.options.missRGBA;
+        if (matchRGBA !== null) {
+            var match_r = matchRGBA[0], match_g = matchRGBA[1], match_b = matchRGBA[2], match_a = matchRGBA[3];
+        }
+        if (missRGBA !== null) {
+            var miss_r = missRGBA[0], miss_g = missRGBA[1], miss_b = missRGBA[2], miss_a = missRGBA[3];
+        }
 
         // go over our pixel-code list and generate the list of integers that we'll use for RGB matching
         // 1000000*R + 1000*G + B = 123123123 which is an integer, and finding an integer inside an array is a lot faster than finding an array inside an array
@@ -116,10 +121,11 @@ L.TileLayer.PixelFilter = L.TileLayer.extend({
             }
 
             // did it match? either way we push a R, a G, and a B onto the image blob
-            output.data[i  ] = match ? match_r : miss_r;
-            output.data[i+1] = match ? match_g : miss_g;
-            output.data[i+2] = match ? match_b : miss_b;
-            output.data[i+3] = match ? match_a : miss_a;
+            // if the target RGBA is a null, then we push exactly the same RGBA as we found in the source pixel
+            output.data[i  ] = match ? (matchRGBA===null ? r : match_r) : (missRGBA===null ? r : miss_r);
+            output.data[i+1] = match ? (matchRGBA===null ? g : match_g) : (missRGBA===null ? g : miss_g);
+            output.data[i+2] = match ? (matchRGBA===null ? b : match_b) : (missRGBA===null ? b : miss_b);
+            output.data[i+3] = match ? (matchRGBA===null ? a : match_a) : (missRGBA===null ? a : miss_a);
         }
 
         // write the image back to the canvas, and assign its base64 back into the on-screen tile to visualize the change

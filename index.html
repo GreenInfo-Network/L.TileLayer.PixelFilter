@@ -23,16 +23,11 @@
 <div class="container-fluid">
     <div class="row">
         <div class="col-md-3">
-            <h4>Basic functionality</h4>
-            <p>
-                In <i>index.js</i> the <i>L.tileLayerPixelFilter</i> is given RGB codes to fill in the selected areas with red and the un-selected areas with nothing.
-            </p>
-
-            <p>
-                setPixelCodes() takes a list of [r,g,b] trios and will highlight pixels whose RGB is on the list.<br/>
-                &bull; A blank list will highlight everything (All Zones).<br/>
-                &bull; A list of impossible codes such as [-1,-1,-1] will match nothing (No Zones).
-            </p>
+            <h4>Color-swap Functionality</h4>
+            <ul>
+                <li><b>matchRGBA</b> fills in the selected areas with red</li>
+                <li><b>missRGBA</b> fills the un-selected areas with blue</li>
+            </ul>
 
             <ul>
                 <li><a href="javascript:void(0);" onClick="OVERLAY1.setPixelCodes([]);">All Zones</a></li>
@@ -56,16 +51,11 @@
 <div class="container-fluid">
     <div class="row">
         <div class="col-md-3">
-            <h4>Masking functionality</h4>
-            <p>
-                In <i>index.js</i> the <i>L.tileLayerPixelFilter</i> is given RGB codes to fill in the selected areas with nothing (alpha=0) and the de-selected areas with white.
-            </p>
-            <p>
-                Combined with a second layer that is these same tiles with no filtering at all, you can achieve a cool masking effect.
-            </p>
-            <p>
-                In this case, the mask does cover up the basemap so you may want to skip the basemap in favor of overlaying labels and boundaries <b>over</b> the analytical overlay.
-            </p>
+            <h4>Passthrough Functionality</h4>
+            <ul>
+                <li><b>matchRGBA</b> is <i>null</i> to keep the existing color</li>
+                <li><b>missRGBA</b> fills the un-selected areas with transparency</li>
+            </ul>
 
             <ul>
                 <li><a href="javascript:void(0);" onClick="OVERLAY2.setPixelCodes([]);">All Zones</a></li>
