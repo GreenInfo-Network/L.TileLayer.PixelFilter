@@ -63,7 +63,7 @@ L.TileLayer.PixelFilter = L.TileLayer.extend({
     // if the layer is redrawn, it's a new IMG element and that means it would not yet be tagged
     applyFiltersToTile: function (imgelement) {
         // already processed, see note above
-        if (imgelement.already_pixel_swapped) return;
+        if (imgelement.getAttribute('data-PixelFilterDone')) return;
 
         // copy the image data onto a canvas for manipulation
         var width  = imgelement.width;
@@ -131,7 +131,7 @@ L.TileLayer.PixelFilter = L.TileLayer.extend({
         // write the image back to the canvas, and assign its base64 back into the on-screen tile to visualize the change
         // tag the tile as having already been updated, so we don't process a 'load' event again and re-process a tile that surely won't match any target RGB codes, in an infinite loop!
         context.putImageData(output, 0, 0);
-        imgelement.already_pixel_swapped = true;
+        imgelement.setAttribute('data-PixelFilterDone', true);
         imgelement.src = canvas.toDataURL();
     }
 });
