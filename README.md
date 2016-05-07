@@ -8,10 +8,12 @@ For a quick start, check out the demos at http://greeninfo-network.github.io/L.T
 
 Usage is almost exactly like a typical L.TileLayer, except for a few additional options.
 
+    // after tiles load, any pure red (255,0,0) tiles will be replaced with black
+    // any other colors will be filled with white at 1/4 opacity
     var filtered = L.tileLayerPixelFilter('https://mapbox-or-something/tiles/{z}/{x}/{y}.png', {
-        matchRGBA: [ 255,  0,  0, 128 ],
-        missRGBA:  [ 0, 0, 0, 0 ],
-        pixelCodes: [ [255,0,2] ]
+        matchRGBA: [ 0,  0,  0, 255  ],
+        missRGBA:  [ 255, 255, 255, 64 ],
+        pixelCodes: [ [255, 0, 0] ]
     }).addTo(MAP);
 
 * **pixelCodes** -- Specify which RGB codes you want to match. See *setPixelCodes()* for more details.
@@ -41,7 +43,9 @@ The value **null** may be given, to indicate that the existing pixel value shoul
 
 * This sort of RGB-based pixel replacement is best suited for data whose RGB code indicates a discrete classification. JPEG images and photographs may give some interesting effects, but may not.
 
-* When preparing your map tiles be sure to use the *nearest neighbor* resampling algorithm. This causes interpolated pixels to inherit a specific pre-existing RGB code from the nearest pre-existing pixel, rather than attempting to average out the color. Using a resampler that modifies the pixel values will result in pixel values that were not in your original dataset, and which may not match your filtering needs. For example:
+* You can use ArcMap's *Composite Bands* tool in order to create a three-band RGBA TIFF or PNG, so your pixels can be carefully contrived to represent not visual color but up to three separate variables. The resulting TIFF can be run through *gdal2tiles.py* to generate the map tiles in PNG format. Your *pixelCodes* can then be thought of not as "255,0,0 means red" but "23,12,64 means mountainous, low feasibility, moderate cost" Basically any classified data whose value fits into the range 0-255 could be used, and up to three datasets, if you contrive it.
+
+* When preparing your map tiles be sure to use the *nearest neighbor* resampling algorithm. This causes interpolated pixels to inherit a their RGB code from the nearest pre-existing pixel using its pre-existing RGB value. Other resamplers including the default *average* or *bilinear* do not preserve pixel values, and will result in pixel values that were not in your original dataset. As such, the resulting pixels will not match your filtering needs. For example:
 
         gdalwarp -t_srs esg:3857 -r near input.tif output.tif
         gdal2tiles.py -r near input.tif tiles
