@@ -2,78 +2,14 @@
 <html>
 <head>
     <title>L.TileLayer.PixelFilter</title>
-
-    <!-- Bootstrap -->
-    <script type="text/javascript" src="https://code.jquery.com/jquery-2.2.3.min.js" integrity="sha256-a23g1Nt4dtEYOj7bR+vTu7+T8VP13humZFBJNIYoEJo=" crossorigin="anonymous"></script>
-    <link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
-    <link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css" integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous">
-    <script type="text/javascript" src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
-
-    <!-- Leaflet -->
-    <link rel="stylesheet" type="text/css" href="http://cdn.leafletjs.com/leaflet/v0.7.7/leaflet.css" />
-    <script type="text/javascript" src="http://cdn.leafletjs.com/leaflet/v0.7.7/leaflet.js"></script>
-
-    <!-- the tileLayerPixelSwap library and the demo files -->
-    <script type="text/javascript" src="leaflet-tileLayerPixelFilter.js"></script>
-    <script type="text/javascript" src="index.js"></script>
 </head>
-<body onLoad="init1(); init2();">
+<body>
 
 
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-md-3">
-            <h4>Color-swap Functionality</h4>
-            <ul>
-                <li><b>matchRGBA</b> fills in the selected areas with red</li>
-                <li><b>missRGBA</b> fills the un-selected areas with blue</li>
-            </ul>
-
-            <ul>
-                <li><a href="javascript:void(0);" onClick="OVERLAY1.setPixelCodes([]);">All Zones</a></li>
-                <li><a href="javascript:void(0);" onClick="OVERLAY1.setPixelCodes([ [45,161,85], [81,27,150] ]);">Zone 1 and 2</a></li>
-                <li><a href="javascript:void(0);" onClick="OVERLAY1.setPixelCodes([ [148,19,4], [250,207,237] ]);">Zone 3 and 4</a></li>
-                <li><a href="javascript:void(0);" onClick="OVERLAY1.setPixelCodes([ [213,242,22], [15,77,87] ]);">Zone 5 and 6</a></li>
-                <li><a href="javascript:void(0);" onClick="OVERLAY1.setPixelCodes([ [168,8,91], [122,97,28] ]);">Zone 7 and 8</a></li>
-                <li><a href="javascript:void(0);" onClick="OVERLAY1.setPixelCodes([ [135,250,244], [2,247,7] ]);">Zone 9 and 10</a></li>
-                <li><a href="javascript:void(0);" onClick="OVERLAY1.setPixelCodes([ [99,90,158], [99,57,59] ]);">Zone 11 and 12</a></li>
-                <li><a href="javascript:void(0);" onClick="OVERLAY1.setPixelCodes([ [232,161,7] ]);">Zone 13</a></li>
-                <li><a href="javascript:void(0);" onClick="OVERLAY1.setPixelCodes([ [-1,-1,-1] ]);">No Zones</a></li>
-            </ul>
-        </div>
-        <div class="col-md-9" id="map1" style="height:6in;">
-        </div>
-    </div>
-</div>
-
-<hr />
-
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-md-3">
-            <h4>Passthrough Functionality</h4>
-            <ul>
-                <li><b>matchRGBA</b> is <i>null</i> to keep the existing color</li>
-                <li><b>missRGBA</b> fills the un-selected areas with transparency</li>
-            </ul>
-
-            <ul>
-                <li><a href="javascript:void(0);" onClick="OVERLAY2.setPixelCodes([]);">All Zones</a></li>
-                <li><a href="javascript:void(0);" onClick="OVERLAY2.setPixelCodes([ [45,161,85], [81,27,150] ]);">Zone 1 and 2</a></li>
-                <li><a href="javascript:void(0);" onClick="OVERLAY2.setPixelCodes([ [148,19,4], [250,207,237] ]);">Zone 3 and 4</a></li>
-                <li><a href="javascript:void(0);" onClick="OVERLAY2.setPixelCodes([ [213,242,22], [15,77,87] ]);">Zone 5 and 6</a></li>
-                <li><a href="javascript:void(0);" onClick="OVERLAY2.setPixelCodes([ [168,8,91], [122,97,28] ]);">Zone 7 and 8</a></li>
-                <li><a href="javascript:void(0);" onClick="OVERLAY2.setPixelCodes([ [135,250,244], [2,247,7] ]);">Zone 9 and 10</a></li>
-                <li><a href="javascript:void(0);" onClick="OVERLAY2.setPixelCodes([ [99,90,158], [99,57,59] ]);">Zone 11 and 12</a></li>
-                <li><a href="javascript:void(0);" onClick="OVERLAY2.setPixelCodes([ [232,161,7] ]);">Zone 13</a></li>
-                <li><a href="javascript:void(0);" onClick="OVERLAY2.setPixelCodes([ [-1,-1,-1] ]);">No Zones</a></li>
-            </ul>
-        </div>
-        <div class="col-md-9" id="map2" style="height:6in;">
-        </div>
-    </div>
-</div>
-
+<ul>
+    <li><a href="demo1.html">Demo 1: Color-swap Functionality</a></li>
+    <li><a href="demo2.html">Demo 2: Passthrough Functionality</a></li>
+</ul>
 
 </body>
 </html>
