@@ -60,11 +60,11 @@ The value **null** may be given, to indicate that the existing pixel value shoul
 
 # Cross Domain
 
-Like AJAX with cross-domain data, the Canvas is paranoid about cross-origin content. If your tiles are hosted somewhere other than the rest of your website, then Canvas will refuse to do its thing. You basically have two options:
+Like AJAX with cross-domain data, the Canvas is paranoid about cross-origin image content. If your tiles are hosted somewhere other than the rest of your website, then Canvas will refuse to do its thing. You basically have two options:
 
 * Move the tiles onto the same the website. If you think they already are, check the L.TileLayer URL and make sure.
 
-* Set up CORS for the map tile service, so the tile service explicitly includes headers that it's okay to treat these tiles as cross-domain.
+* Set up CORS for the map tile service, so the tile service explicitly includes the **Access-Control-Allow-Origin "*"** header. If you're not sure, use your browser's F12 debugger and make sure that the header is present.
 
 For more information:
 * https://blog.codepen.io/2013/10/08/cross-domain-images-tainted-canvas/
