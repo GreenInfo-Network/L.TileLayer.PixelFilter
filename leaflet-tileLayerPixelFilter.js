@@ -56,6 +56,14 @@ L.TileLayer.PixelFilter = L.TileLayer.extend({
         this.redraw(true);
     },
 
+    // extend the _createTile function to add the .crossOrigin attribute, since loading tiles from a separate service is a pretty common need
+    // and the Canvas is paranoid about cross-domain image data. see issue #5
+    _createTile: function () {
+        var tile = L.TileLayer.prototype._createTile.call(this);
+        tile.crossOrigin = "Anonymous";
+        return tile;
+    },
+
     // the heavy lifting to do the pixel-swapping
     // called upon 'tileload' and passed the IMG element
     // tip: when the tile is saved back to the IMG element that counts as a tileload event too! thus an infinite loop, as wel as comparing the pixelCodes against already-replaced pixels!
@@ -96,7 +104,12 @@ L.TileLayer.PixelFilter = L.TileLayer.extend({
 
         // iterate over the pixels (each one is 4 bytes, RGBA)
         // and see if they are on our list (recall the "addition" thing so we're comparing integers in an array for performance)
-        var pixels = context.getImageData(0, 0, width, height).data;
+        // per issue #5 catch a failure here, which is likely a cross-domain problem
+        try {
+            var pixels = context.getImageData(0, 0, width, height).data;
+        } catch(e) {
+            throw "L.TileLayer.PixelFilter getImageData() failed. Likely a cross-domain issue?";
+        }
         for(var i = 0, n = pixels.length; i < n; i += 4) {
             var r = pixels[i  ];
             var g = pixels[i+1];
