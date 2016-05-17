@@ -45,6 +45,8 @@ The value **null** may be given, to indicate that the existing pixel value shoul
 
 # Tips
 
+* Canvas is paranoid about cross-origin tiles, in the same qay as AJAX calls are weird about cross-domain JSON data. If the URL of your tiles starts with *http* or *https*, see the Cross Domain section for some advice.
+
 * This sort of RGB-based pixel replacement is best suited for data whose RGB code indicates a discrete classification. JPEG images and photographs may give some interesting effects, but may not.
 
 * Using *null* masks makes for really neat masking/visibility effects. Check out the demo.
@@ -55,3 +57,15 @@ The value **null** may be given, to indicate that the existing pixel value shoul
 
         gdalwarp -t_srs esg:3857 -r near input.tif output.tif
         gdal2tiles.py -r near input.tif tiles
+
+# Cross Domain
+
+Like AJAX with cross-domain data, the Canvas is paranoid about cross-origin content. If your tiles are hosted somewhere other than the rest of your website, then Canvas will refuse to do its thing. You basically have two options:
+
+* Move the tiles onto the same the website. If you think they already are, check the L.TileLayer URL and make sure.
+
+* Set up CORS for the map tile service, so the tile service explicitly includes headers that it's okay to treat these tiles as cross-domain.
+
+For more information:
+* https://blog.codepen.io/2013/10/08/cross-domain-images-tainted-canvas/
+* https://davidwalsh.name/cross-domain-canvas-images

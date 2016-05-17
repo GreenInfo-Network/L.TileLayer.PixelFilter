@@ -96,7 +96,12 @@ L.TileLayer.PixelFilter = L.TileLayer.extend({
 
         // iterate over the pixels (each one is 4 bytes, RGBA)
         // and see if they are on our list (recall the "addition" thing so we're comparing integers in an array for performance)
-        var pixels = context.getImageData(0, 0, width, height).data;
+        // per issue #5 catch a failure here, which is likely a cross-domain problem
+        try {
+            var pixels = context.getImageData(0, 0, width, height).data;
+        } catch(e) {
+            throw "L.TileLayer.PixelFilter getImageData() failed. Likely a cross-domain issue?";
+        }
         for(var i = 0, n = pixels.length; i < n; i += 4) {
             var r = pixels[i  ];
             var g = pixels[i+1];
