@@ -11,7 +11,7 @@ L.TileLayer.PixelFilter = L.TileLayer.extend({
     // the constructor saves settings and throws a fit if settings are bad, as typical
     // then adds the all-important 'tileload' event handler which basically "detects" an unmodified tile and performs the pxiel-swap
     initialize: function (url, options) {
-        options = L.extend(L.TileLayer.prototype.options, {
+        options = L.extend({}, L.TileLayer.prototype.options, {
             matchRGBA: null,
             missRGBA: null,
             pixelCodes: []
