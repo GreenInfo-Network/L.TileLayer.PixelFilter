@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script>
+function fetchAndReportFirstPixel() {
+    // create the element "the hard way" so we can set crossOrigin on the tile and load it from gist/pastebin/etc
+    var img = document.createElement('img');
+    //img.src = "http://greeninfo-network.github.io/L.TileLayer.PixelFilter/tiles/3/6/5.png";
+    img.src = "prc_6_14_37.png";
+    img.crossOrigin = "Anonymous";
+    img.addEventListener('load', function () {
+        // copy the image onto the canvas
+        var imgelement = this;
+
+        var width     = imgelement.width;
+        var height    = imgelement.height;
+        var canvas    = document.createElement("canvas");
+        canvas.width  = width;
+        canvas.height = height;
+
+        var context = canvas.getContext("2d");
+        context.drawImage(imgelement, 0, 0);
+
+        var pixels = context.getImageData(0, 0, width, height).data;
+
+        var r = pixels[0];
+        var g = pixels[1];
+        var b = pixels[2];
+        var a = pixels[3];
+
+        var rgbreadout = document.createElement('div');
+        rgbreadout.innerHTML = [r, g, b, a].join(", ");
+        document.body.appendChild(rgbreadout);
+
+        var urlreadout = document.createElement('div');
+        urlreadout.innerHTML = imgelement.src;
+        document.body.appendChild(urlreadout);
+    });
+    document.body.appendChild(img);
+}
+</script>
+</head>
+<body onLoad="fetchAndReportFirstPixel();">
+
+<p>You should see an image below, and the RGBA code of the first pixel of the loaded image.</p>
+
+</body>
+</html>
