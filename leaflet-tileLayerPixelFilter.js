@@ -24,6 +24,9 @@ L.TileLayer.PixelFilter = L.TileLayer.extend({
         this.setMissRGBA(this.options.missRGBA);
         this.setPixelCodes(this.options.pixelCodes);
 
+        // set crossOrigin to true
+        options.crossOrigin = true;
+        
         // and add our tile-load event hook which triggers us to do the pixel-swap
         this.on('tileload', function (event) {
             this.applyFiltersToTile(event.tile);
