@@ -14,7 +14,8 @@ L.TileLayer.PixelFilter = L.TileLayer.extend({
         options = L.extend({}, L.TileLayer.prototype.options, {
             matchRGBA: null,
             missRGBA: null,
-            pixelCodes: []
+            pixelCodes: [],
+            crossOrigin: true // bypass potential CORS issues by defaulting to true
         }, options);
         L.TileLayer.prototype.initialize.call(this, url, options);
         L.setOptions(this, options);
@@ -24,9 +25,6 @@ L.TileLayer.PixelFilter = L.TileLayer.extend({
         this.setMissRGBA(this.options.missRGBA);
         this.setPixelCodes(this.options.pixelCodes);
 
-        // set crossOrigin to true
-        options.crossOrigin = true;
-        
         // and add our tile-load event hook which triggers us to do the pixel-swap
         this.on('tileload', function (event) {
             this.applyFiltersToTile(event.tile);
