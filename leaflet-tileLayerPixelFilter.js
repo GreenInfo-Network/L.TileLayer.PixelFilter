@@ -14,7 +14,8 @@ L.TileLayer.PixelFilter = L.TileLayer.extend({
         options = L.extend({}, L.TileLayer.prototype.options, {
             matchRGBA: null,
             missRGBA: null,
-            pixelCodes: []
+            pixelCodes: [],
+            crossOrigin: true // bypass potential CORS issues by defaulting to true
         }, options);
         L.TileLayer.prototype.initialize.call(this, url, options);
         L.setOptions(this, options);
