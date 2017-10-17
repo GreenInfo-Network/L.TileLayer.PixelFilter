@@ -4,6 +4,10 @@ A Leaflet TileLayer extension which will replace RGB codes in the tiles, so as t
 
 For a quick start, check out the demos at http://greeninfo-network.github.io/L.TileLayer.PixelFilter/
 
+To download, either download one of the releases from the Github repository's *Releases* tab, or install via package manager:
+* `npm i leaflet-tilelayer-pixelfilter`
+
+
 # Constructor and Options
 
 Usage is almost exactly like a typical L.TileLayer, except for a few additional options.
