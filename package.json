@@ -1,0 +1,19 @@
+{
+  "name": "leaflet-tilelayer-pixelfilter",
+  "version": "1.3.1",
+  "description": "Leaflet TileLayer extension which can filter out pixels to provide a mask or color-swapping",
+  "main": "leaflet-tileLayerPixelFilter.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GreenInfo-Network/L.TileLayer.PixelFilter.git"
+  },
+  "author": "GreenInfo Network <gin@greeninfo.org> (http://www.greeninfo.org/)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/GreenInfo-Network/L.TileLayer.PixelFilter/issues"
+  },
+  "homepage": "https://github.com/GreenInfo-Network/L.TileLayer.PixelFilter#readme"
+}
