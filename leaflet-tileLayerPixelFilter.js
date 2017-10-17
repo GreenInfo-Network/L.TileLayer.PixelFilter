@@ -5,7 +5,7 @@
  */
 L.tileLayerPixelFilter = function (url, options) {
     return new L.TileLayer.PixelFilter(url, options);
-}
+};
 
 L.TileLayer.PixelFilter = L.TileLayer.extend({
     // the constructor saves settings and throws a fit if settings are bad, as typical
@@ -87,18 +87,26 @@ L.TileLayer.PixelFilter = L.TileLayer.extend({
         var output = context.createImageData(width, height);
 
         // extract out our RGBA trios into separate numbers, so we don't have to use rgba[i] a zillion times
-        var matchRGBA = this.options.matchRGBA, missRGBA = this.options.missRGBA;
+        var match_r, match_g, match_b, match_a;
+        var matchRGBA = this.options.matchRGBA;
+        var missRGBA  = this.options.missRGBA;
         if (matchRGBA !== null) {
-            var match_r = matchRGBA[0], match_g = matchRGBA[1], match_b = matchRGBA[2], match_a = matchRGBA[3];
+            match_r = matchRGBA[0];
+            match_g = matchRGBA[1];
+            match_b = matchRGBA[2];
+            match_a = matchRGBA[3];
         }
         if (missRGBA !== null) {
-            var miss_r = missRGBA[0], miss_g = missRGBA[1], miss_b = missRGBA[2], miss_a = missRGBA[3];
+            miss_r = missRGBA[0];
+            miss_g = missRGBA[1];
+            miss_b = missRGBA[2];
+            miss_a = missRGBA[3];
         }
 
         // go over our pixel-code list and generate the list of integers that we'll use for RGB matching
         // 1000000*R + 1000*G + B = 123123123 which is an integer, and finding an integer inside an array is a lot faster than finding an array inside an array
         var pixelcodes = [];
-        for (var i=0, l=this.options.pixelCodes.length; i<l; i++) {
+        for (var ii = 0, il = this.options.pixelCodes.length; ii < il; ii++) {
             var value = 1000000 * this.options.pixelCodes[i][0] + 1000 * this.options.pixelCodes[i][1] + this.options.pixelCodes[i][2];
             pixelcodes.push(value);
         }
@@ -106,23 +114,24 @@ L.TileLayer.PixelFilter = L.TileLayer.extend({
         // iterate over the pixels (each one is 4 bytes, RGBA)
         // and see if they are on our list (recall the "addition" thing so we're comparing integers in an array for performance)
         // per issue #5 catch a failure here, which is likely a cross-domain problem
+        var pixels;
         try {
-            var pixels = context.getImageData(0, 0, width, height).data;
+            pixels = context.getImageData(0, 0, width, height).data;
         } catch(e) {
             throw "L.TileLayer.PixelFilter getImageData() failed. Likely a cross-domain issue?";
         }
-        for(var i = 0, n = pixels.length; i < n; i += 4) {
-            var r = pixels[i  ];
-            var g = pixels[i+1];
-            var b = pixels[i+2];
-            var a = pixels[i+3];
+        for(var pi = 0, pn = pixels.length; pi < pn; pi += 4) {
+            var r = pixels[pi];
+            var g = pixels[pi+1];
+            var b = pixels[pi+2];
+            var a = pixels[pi+3];
 
             // bail condition: if the alpha is 0 then it's already transparent, likely nodata, and we should skip it
             if (a == 0) {
-                output.data[i  ] = 255;
-                output.data[i+1] = 255;
-                output.data[i+2] = 255;
-                output.data[i+3] = 0;
+                output.data[pi  ] = 255;
+                output.data[pi+1] = 255;
+                output.data[pi+2] = 255;
+                output.data[pi+3] = 0;
                 continue;
             }
 
@@ -136,10 +145,10 @@ L.TileLayer.PixelFilter = L.TileLayer.extend({
 
             // did it match? either way we push a R, a G, and a B onto the image blob
             // if the target RGBA is a null, then we push exactly the same RGBA as we found in the source pixel
-            output.data[i  ] = match ? (matchRGBA===null ? r : match_r) : (missRGBA===null ? r : miss_r);
-            output.data[i+1] = match ? (matchRGBA===null ? g : match_g) : (missRGBA===null ? g : miss_g);
-            output.data[i+2] = match ? (matchRGBA===null ? b : match_b) : (missRGBA===null ? b : miss_b);
-            output.data[i+3] = match ? (matchRGBA===null ? a : match_a) : (missRGBA===null ? a : miss_a);
+            output.data[pi  ] = match ? (matchRGBA === null ? r : match_r) : (missRGBA === null ? r : miss_r);
+            output.data[pi+1] = match ? (matchRGBA === null ? g : match_g) : (missRGBA === null ? g : miss_g);
+            output.data[pi+2] = match ? (matchRGBA === null ? b : match_b) : (missRGBA === null ? b : miss_b);
+            output.data[pi+3] = match ? (matchRGBA === null ? a : match_a) : (missRGBA === null ? a : miss_a);
         }
 
         // write the image back to the canvas, and assign its base64 back into the on-screen tile to visualize the change
