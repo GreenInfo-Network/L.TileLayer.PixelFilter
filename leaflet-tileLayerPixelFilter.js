@@ -107,7 +107,7 @@ L.TileLayer.PixelFilter = L.TileLayer.extend({
         // 1000000*R + 1000*G + B = 123123123 which is an integer, and finding an integer inside an array is a lot faster than finding an array inside an array
         var pixelcodes = [];
         for (var ii = 0, il = this.options.pixelCodes.length; ii < il; ii++) {
-            var value = 1000000 * this.options.pixelCodes[i][0] + 1000 * this.options.pixelCodes[i][1] + this.options.pixelCodes[i][2];
+            var value = 1000000 * this.options.pixelCodes[ii][0] + 1000 * this.options.pixelCodes[ii][1] + this.options.pixelCodes[ii][2];
             pixelcodes.push(value);
         }
 
