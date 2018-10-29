@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>L.TileLayer.PixelFilter</title>
+
+    <!-- Bootstrap -->
+    <script type="text/javascript" src="https://code.jquery.com/jquery-2.2.3.min.js" integrity="sha256-a23g1Nt4dtEYOj7bR+vTu7+T8VP13humZFBJNIYoEJo=" crossorigin="anonymous"></script>
+    <link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+    <link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css" integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous">
+    <script type="text/javascript" src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
+
+    <!-- Leaflet -->
+    <link rel="stylesheet" type="text/css" href="http://cdn.leafletjs.com/leaflet/v0.7.7/leaflet.css" />
+    <script type="text/javascript" src="http://cdn.leafletjs.com/leaflet/v0.7.7/leaflet.js"></script>
+
+    <!-- the tileLayerPixelSwap library and the demo files -->
+    <script type="text/javascript" src="leaflet-tileLayerPixelFilter.js"></script>
+    <script type="text/javascript" src="demo2.js"></script>
+
+</head>
+<body onLoad="init();">
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-sm-3">
+            <h4>Elevation</h4>
+            <div class="slidecontainer">
+              <input type="range" min="0" max="51" value="0" class="slider" id="myRange">
+              <p><span id="titletext"></span></p>
+            </div>
+        </div>
+        <div class="col-sm-9" id="map" style="height:100vh;">
+        </div>
+    </div>
+</div>
+<script type="text/javascript">
+var input = $('#myRange');
+input.change(function () {
+    pickSliderValue( $(this).val() );
+});
+
+function pickSliderValue (whichramp) {
+    var colorsArray = [ [71,71,71], [72,72,72], [73,73,73], [74,74,74], [75,75,75], [76,76,76], [77,77,77], [78,78,78], [79,79,79], [80,80,80], [81,81,81], [82,82,82], [83,83,83], [84,84,84], [85,85,85], [86,86,86], [87,87,87], [88,88,88], [89,89,89], [90,90,90], [91,91,91], [92,92,92], [93,93,93], [94,94,94], [95,95,95], [96,96,96], [97,97,97], [98,98,98], [99,99,99], [100,100,100], [101,101,101], [102,102,102], [103,103,103], [104,104,104], [105,105,105], [106,106,106], [107,107,107], [108,108,108], [109,109,109], [110,110,110], [111,111,111], [112,112,112], [113,113,113], [114,114,114], [115,115,115], [116,116,116], [117,117,117], [118,118,118], [119,119,119], [120,120,120], [121,121,121], [122,122,122], [123,123,123], [124,124,124], [125,125,125], [126,126,126], [127,127,127], [128,128,128], [129,129,129], [130,130,130], [131,131,131], [132,132,132], [133,133,133] ];
+    
+    var title = "";
+
+    switch (whichramp) {
+        case '0':
+            title = "Gray1";
+            colors = colorsArray;
+            break;
+        case '1':
+            title = "Gray2";
+            colors = colorsArray.splice(0,62);
+            break;
+        case '2':
+            title = "Gray3";
+            colors = colorsArray.splice(0,61);
+            break;
+        case '3':
+            title = "Gray4";
+            colors = colorsArray.splice(0,60);
+            break;
+        case '4':
+            title = "Gray5";
+            colors = colorsArray.splice(0,59);
+            break;
+        case '5':
+            title = "Gray6";
+            colors = colorsArray.splice(0,58);
+            break;
+        case '6':
+            title = "Gray7";
+            colors = colorsArray.splice(0,57);
+            break;
+        case '7':
+            title = "Gray8";
+            colors = colorsArray.splice(0,56);
+            break;
+        case '8':
+            title = "Gray9";
+            colors = colorsArray.splice(0,55);
+            break;
+        case '9':
+            title = "Gray10";
+            colors = colorsArray.splice(0,54);
+            break;
+        case '10':
+            title = "Gray11";
+            colors = colorsArray.splice(0,53);
+            break;
+        case '11':
+            title = "Gray12";
+            colors = colorsArray.splice(0,52);
+            break;
+        case '12':
+            title = 'Gray13';
+            colors = colorsArray.splice(0,51);
+            break;
+        case '13':
+            title = 'Gray14';
+            colors = colorsArray.splice(0,50);
+            break;
+        case '14':
+            title = 'Gray15';
+            colors = colorsArray.splice(0,49);
+            break;
+        case '15':
+            title = 'Gray16';
+            colors = colorsArray.splice(0,48);
+            break;
+        case '16':
+            title = 'Gray17';
+            colors = colorsArray.splice(0,47);
+            break;
+        case '17':
+            title = 'Gray18';
+            colors = colorsArray.splice(0,46);
+            break;
+        case '18':
+            title = 'Gray19';
+            colors = colorsArray.splice(0,45);
+            break;
+        case '19':
+            title = 'Gray20';
+            colors = colorsArray.splice(0,44);
+            break;
+        case '20':
+            title = 'Gray21';
+            colors = colorsArray.splice(0,43);
+            break;
+        case '21':
+            title = 'Gray22';
+            colors = colorsArray.splice(0,42);
+            break;
+        case '22':
+            title = 'Gray23';
+            colors = colorsArray.splice(0,41);
+            break;
+        case '23':
+            title = 'Gray24';
+            colors = colorsArray.splice(0,40);
+            break;
+        case '24':
+            title = 'Gray25';
+            colors = colorsArray.splice(0,39);
+            break;
+        case '25':
+            title = 'Gray26';
+            colors = colorsArray.splice(0,38);
+            break;
+        case '26':
+            title = 'Gray27';
+            colors = colorsArray.splice(0,37);
+            break;
+        case '27':
+            title = 'Gray28';
+            colors = colorsArray.splice(0,36);
+            break;
+        case '28':
+            title = 'Gray29';
+            colors = colorsArray.splice(0,35);
+            break;
+        case '29':
+            title = 'Gray30';
+            colors = colorsArray.splice(0,34);
+            break;
+        case '30':
+            title = 'Gray31';
+            colors = colorsArray.splice(0,33);
+            break;
+        case '31':
+            title = 'Gray32';
+            colors = colorsArray.splice(0,32);
+            break;
+        case '32':
+            title = 'Gray33';
+            colors = colorsArray.splice(0,31);
+            break;
+        case '33':
+            title = 'Gray34';
+            colors = colorsArray.splice(0,30);
+            break;
+        case '34':
+            title = 'Gray35';
+            colors = colorsArray.splice(0,29);
+            break;
+        case '35':
+            title = 'Gray36';
+            colors = colorsArray.splice(0,28);
+            break;
+        case '36':
+            title = 'Gray37';
+            colors = colorsArray.splice(0,27);
+            break;
+        case '37':
+            title = 'Gray38';
+            colors = colorsArray.splice(0,26);
+            break;
+        case '38':
+            title = 'Gray39';
+            colors = colorsArray.splice(0,25);
+            break;
+        case '39':
+            title = 'Gray40';
+            colors = colorsArray.splice(0,24);
+            break;
+        case '40':
+            title = 'Gray41';
+            colors = colorsArray.splice(0,23);
+            break;
+        case '41':
+            title = 'Gray42';
+            colors = colorsArray.splice(0,22);
+            break;
+        case '42':
+            title = 'Gray43';
+            colors = colorsArray.splice(0,21);
+            break;
+        case '43':
+            title = 'Gray44';
+            colors = colorsArray.splice(0,20);
+            break;
+        case '44':
+            title = 'Gray45';
+            colors = colorsArray.splice(0,19);
+            break;
+        case '45':
+            title = 'Gray46';
+            colors = colorsArray.splice(0,18);
+            break;
+        case '46':
+            title = 'Gray47';
+            colors = colorsArray.splice(0,17);
+            break;
+        case '47':
+            title = 'Gray48';
+            colors = colorsArray.splice(0,16);
+            break;
+        case '48':
+            title = 'Gray49';
+            colors = colorsArray.splice(0,15);
+            break;
+        case '49':
+            title = 'Gray50';
+            colors = colorsArray.splice(0,14);
+            break;
+        case '50':
+            title = 'Gray51';
+            colors = colorsArray.splice(0,13);
+            break;
+        case '51':
+            title = 'Gray52';
+            colors = colorsArray.splice(0,12);
+            break;
+    }
+
+    OVERLAY.setPixelCodes(colors);
+    $( "#titletext" ).html(title);
+}
+</script>
+</body>
+</html>
