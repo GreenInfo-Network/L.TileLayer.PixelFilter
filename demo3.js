@@ -2,8 +2,8 @@ var MAP, OVERLAY;
 function init() {
     var MAP = L.map('map', {
         minZoom:1,
-        maxZoom:3,
-    }).setView([0,0],1);
+        maxZoom:8,
+    }).setView([39.8283,-98.5795],3);
 
     // the PixelFilter tilelayer
     OVERLAY = L.tileLayerPixelFilter('tiles/{z}/{x}/{y}.png', {
