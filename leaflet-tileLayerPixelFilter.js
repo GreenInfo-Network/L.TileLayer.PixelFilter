@@ -14,7 +14,8 @@ L.TileLayer.PixelFilter = L.TileLayer.extend({
         options = L.extend({}, L.TileLayer.prototype.options, {
             matchRGBA: null,
             missRGBA: null,
-            pixelCodes: []
+            pixelCodes: [],
+            crossOrigin: 'Anonymous',  // per issue 15, this is how you do it in Leaflet 1.x
         }, options);
         L.TileLayer.prototype.initialize.call(this, url, options);
         L.setOptions(this, options);
@@ -58,6 +59,7 @@ L.TileLayer.PixelFilter = L.TileLayer.extend({
 
     // extend the _createTile function to add the .crossOrigin attribute, since loading tiles from a separate service is a pretty common need
     // and the Canvas is paranoid about cross-domain image data. see issue #5
+    // this is really only for Leaflet 0.7; as of 1.0 L.TileLayer has a crossOrigin setting which we define as a layer option
     _createTile: function () {
         var tile = L.TileLayer.prototype._createTile.call(this);
         tile.crossOrigin = "Anonymous";
