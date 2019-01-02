@@ -49,11 +49,7 @@ The value **null** may be given, to indicate that the existing pixel value shoul
 
 # Tips
 
-* Canvas is paranoid about cross-origin tiles, in the same qay as AJAX calls are weird about cross-domain JSON data. If the URL of your tiles starts with *http* or *https*, see the Cross Domain section for some advice.
-
-* This sort of RGB-based pixel replacement is best suited for data whose RGB code indicates a discrete classification. JPEG images and photographs may give some interesting effects, but may not.
-
-* Using *null* masks makes for really neat masking/visibility effects. Check out the demo.
+* The RGBA values in the image are very important, and must exactly match the pixel codes you set in `matchRGBA` Your data should be PNG files in RGBA mode (also called RGB with alpha channel). Anything else such as JPEG or indexed PNGs or JPEG files, will have antialiasing and other effects which change the pixels in your output image and cause them not to match the expected values.
 
 * You can use ArcMap's *Composite Bands* tool in order to create a three-band RGBA TIFF or PNG, so your pixels can be carefully contrived to represent not visual color but up to three separate variables. The resulting TIFF can be run through *gdal2tiles.py* to generate the map tiles in PNG format. Your *pixelCodes* can then be thought of not as "255,0,0 means red" but "23,12,64 means mountainous, low feasibility, moderate cost" Basically any classified data whose value fits into the range 0-255 could be used, and up to three datasets, if you contrive it.
 
@@ -61,6 +57,10 @@ The value **null** may be given, to indicate that the existing pixel value shoul
 
         gdalwarp -t_srs esg:3857 -r near input.tif output.tif
         gdal2tiles.py -r near input.tif tiles
+
+* Canvas is paranoid about cross-origin tiles, in the same way as AJAX calls are weird about cross-domain JSON data. If the URL of your tiles starts with *http* or *https*, see the Cross Domain section for some advice.
+
+* Using *null* masks makes for really neat masking/visibility effects. Check out the demo.
 
 # Cross Domain
 
