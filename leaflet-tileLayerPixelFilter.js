@@ -2,151 +2,328 @@
  * L.TileLayer.PixelFilter
  * https://github.com/greeninfo/L.TileLayer.PixelFilter
  * http://greeninfo-network.github.io/L.TileLayer.PixelFilter/
+ *
+ * A Leaflet tile layer that intercepts each tile image and rewrites its pixels
+ * according to a set of color-matching rules before the tile is ever painted on
+ * the map.  The key design constraint is that changing a filter rule must update
+ * already-visible tiles instantly and without any new network requests.
+ *
+ * How it works at a high level
+ * ─────────────────────────────
+ * 1. createTile() returns a <canvas> element (not the usual <img>).
+ *    The source PNG is fetched into an off-DOM Image object.
+ * 2. Once the Image loads, the raw RGBA bytes are captured and stored on the
+ *    canvas element itself as tile._pixelFilterRaw (a Uint8ClampedArray).
+ *    This frozen copy of the original data is kept for the lifetime of the tile.
+ * 3. _renderFilteredTile() reads _pixelFilterRaw, applies the current color
+ *    rules, and writes the result to the visible canvas.  This can be called
+ *    any number of times on the same tile (e.g. when settings change) without
+ *    going back to the server.
+ * 4. When a filter option changes (setMatchRGBA / setMissRGBA / setPixelCodes),
+ *    _refilterVisibleTiles() walks every tile currently in Leaflet's tile cache
+ *    and calls _renderFilteredTile() on each one — producing an instant,
+ *    flash-free update.
+ * 5. When Leaflet evicts a tile, _disposeTile() deletes _pixelFilterRaw to free
+ *    the memory.
+ *
+ * Filter options (passed in the options object or set via the public setters)
+ * ───────────────────────────────────────────────────────────────────────────
+ *  pixelCodes  — Array of [r,g,b] triplets that define which source colors are
+ *                considered a "match".  If the array is empty every pixel matches.
+ *  matchRGBA   — [r,g,b,a] to paint over pixels that matched pixelCodes.
+ *                null means "leave the original color unchanged".
+ *  missRGBA    — [r,g,b,a] to paint over pixels that did NOT match pixelCodes.
+ *                null means "leave the original color unchanged".
  */
 L.tileLayerPixelFilter = function (url, options) {
     return new L.TileLayer.PixelFilter(url, options);
-}
+};
 
 L.TileLayer.PixelFilter = L.TileLayer.extend({
-    // the constructor saves settings and throws a fit if settings are bad, as typical
-    // then adds the all-important 'tileload' event handler which basically "detects" an unmodified tile and performs the pxiel-swap
+
+    // ─── Initialization ──────────────────────────────────────────────────────
+
     initialize: function (url, options) {
+        // Merge caller-supplied options with defaults.  crossOrigin must be
+        // 'Anonymous' so that getImageData() can read cross-origin tile pixels
+        // without the browser throwing a security error.
         options = L.extend({}, L.TileLayer.prototype.options, {
             matchRGBA: null,
             missRGBA: null,
             pixelCodes: [],
-            crossOrigin: 'Anonymous',  // per issue 15, this is how you do it in Leaflet 1.x
+            crossOrigin: 'Anonymous',
         }, options);
+
         L.TileLayer.prototype.initialize.call(this, url, options);
         L.setOptions(this, options);
 
-        // go ahead and save our settings
-        this.setMatchRGBA(this.options.matchRGBA);
-        this.setMissRGBA(this.options.missRGBA);
-        this.setPixelCodes(this.options.pixelCodes);
+        // _pixelCodeSet is the Set-based lookup structure built from pixelCodes.
+        // It is rebuilt whenever pixelCodes changes via _setPixelCodes().
+        this._pixelCodeSet = new Set();
 
-        // and add our tile-load event hook which triggers us to do the pixel-swap
-        this.on('tileload', function (event) {
-            this.applyFiltersToTile(event.tile);
+        // Validate and store initial filter values using the private setters.
+        // The public setters also trigger a repaint, which is unnecessary here
+        // because no tiles exist yet.
+        this._setMatchRGBA(this.options.matchRGBA);
+        this._setMissRGBA(this.options.missRGBA);
+        this._setPixelCodes(this.options.pixelCodes);
+
+        // Free the cached raw pixel buffer when Leaflet removes a tile from the
+        // DOM (pan away, zoom change, etc.) so memory is not leaked.
+        this.on('tileunload', function (event) {
+            this._disposeTile(event.tile);
         });
     },
 
-    // settings setters
+    // ─── Public API ──────────────────────────────────────────────────────────
+
+    // setMatchRGBA / setMissRGBA / setPixelCodes are the public API for changing
+    // filter rules at runtime.  Each one updates the stored setting and then
+    // immediately repaints all visible tiles without fetching new ones.
+
+    // Set the RGBA color to paint over pixels that match a pixelCode entry.
+    // Pass null to leave matching pixels with their original color.
     setMatchRGBA: function (rgba) {
-        // save the setting
-        if (rgba !== null && (typeof rgba !== 'object' || typeof rgba.length !== 'number' || rgba.length !== 4) ) throw "L.TileLayer.PixelSwap expected matchRGBA to be RGBA [r,g,b,a] array or else null";
-        this.options.matchRGBA = rgba;
-
-        // force a redraw, which means new tiles, which mean new tileload events; the circle of life
-        this.redraw(true);
+        this._setMatchRGBA(rgba);
+        this._refilterVisibleTiles();
+        return this;
     },
+
+    // Set the RGBA color to paint over pixels that do NOT match any pixelCode.
+    // Pass null to leave non-matching pixels with their original color.
     setMissRGBA: function (rgba) {
-        // save the setting
-        if (rgba !== null && (typeof rgba !== 'object' || typeof rgba.length !== 'number' || rgba.length !== 4) ) throw "L.TileLayer.PixelSwap expected missRGBA to be RGBA [r,g,b,a] array or else null";
-        this.options.missRGBA = rgba;
-
-        // force a redraw, which means new tiles, which mean new tileload events; the circle of life
-        this.redraw(true);
+        this._setMissRGBA(rgba);
+        this._refilterVisibleTiles();
+        return this;
     },
+
+    // Replace the list of pixel codes that define a "match".
+    // pixelcodes must be an array of [r,g,b] triplets, e.g. [[255,0,0],[0,128,0]].
+    // An empty array means every opaque pixel is treated as a match.
     setPixelCodes: function (pixelcodes) {
-        // save the setting
-        if (typeof pixelcodes !== 'object' || typeof pixelcodes.length !== 'number') throw "L.TileLayer.PixelSwap expected pixelCodes to be a list of triplets: [ [r,g,b], [r,g,b], ... ]";
-        this.options.pixelCodes = pixelcodes;
-
-        // force a redraw, which means new tiles, which mean new tileload events; the circle of life
-        this.redraw(true);
+        this._setPixelCodes(pixelcodes);
+        this._refilterVisibleTiles();
+        return this;
     },
 
-    // extend the _createTile function to add the .crossOrigin attribute, since loading tiles from a separate service is a pretty common need
-    // and the Canvas is paranoid about cross-domain image data. see issue #5
-    // this is really only for Leaflet 0.7; as of 1.0 L.TileLayer has a crossOrigin setting which we define as a layer option
-    _createTile: function () {
-        var tile = L.TileLayer.prototype._createTile.call(this);
-        tile.crossOrigin = "Anonymous";
+    // ─── Tile creation ───────────────────────────────────────────────────────
+
+    // Override Leaflet's default createTile() so each tile is a <canvas> element
+    // instead of an <img>.  This allows us to write filtered pixels directly to
+    // the element that appears on the map, ensuring the raw (unfiltered) image is
+    // never visible to the user even for a single frame.
+    createTile: function (coords, done) {
+        // Create the canvas that will live in the map DOM.
+        var tile = L.DomUtil.create('canvas', 'leaflet-tile');
+        var size = this.getTileSize();
+        tile.width = size.x;
+        tile.height = size.y;
+
+        // Fetch the source PNG into an off-DOM Image.  The Image is a temporary
+        // object used only to decode the PNG; it is never added to the DOM.
+        var image = new Image();
+
+        // Mirror the crossOrigin setting so getImageData() works for tiles served
+        // from a different origin (e.g. a tile CDN).
+        if (this.options.crossOrigin || this.options.crossOrigin === '') {
+            image.crossOrigin = this.options.crossOrigin === true ? '' : this.options.crossOrigin;
+        }
+
+        image.onload = L.bind(function () {
+            try {
+                // Snapshot the raw, unfiltered pixels from the decoded Image.
+                // Storing them on the tile element means _renderFilteredTile()
+                // can repaint the same tile later (when settings change) without
+                // another network round-trip.
+                tile._pixelFilterRaw = this._captureRawPixels(image, size.x, size.y);
+
+                // Apply the current filter rules and paint the result onto the canvas.
+                this._renderFilteredTile(tile);
+
+                // Signal to Leaflet that this tile is ready to display.
+                done(null, tile);
+            } catch (error) {
+                done(error, tile);
+            }
+        }, this);
+
+        image.onerror = function () {
+            done(new Error('L.TileLayer.PixelFilter could not load tile image'), tile);
+        };
+
+        // Kick off the network request for the tile PNG.
+        image.src = this.getTileUrl(coords);
+
+        // Return the canvas immediately; Leaflet will show it once done() fires.
         return tile;
     },
 
-    // the heavy lifting to do the pixel-swapping
-    // called upon 'tileload' and passed the IMG element
-    // tip: when the tile is saved back to the IMG element that counts as a tileload event too! thus an infinite loop, as wel as comparing the pixelCodes against already-replaced pixels!
-    //      so, we tag the already-swapped tiles so we know when to quit
-    // if the layer is redrawn, it's a new IMG element and that means it would not yet be tagged
-    applyFiltersToTile: function (imgelement) {
-        // already processed, see note above
-        if (imgelement.getAttribute('data-PixelFilterDone')) return;
+    // ─── Private setters (validate only, no repaint) ─────────────────────────
 
-        // copy the image data onto a canvas for manipulation
-        var width  = imgelement.width;
-        var height = imgelement.height;
-        var canvas    = document.createElement("canvas");
-        canvas.width  = width;
-        canvas.height = height;
-        var context = canvas.getContext("2d");
-        context.drawImage(imgelement, 0, 0);
-
-        // create our target imagedata
-        var output = context.createImageData(width, height);
-
-        // extract out our RGBA trios into separate numbers, so we don't have to use rgba[i] a zillion times
-        var matchRGBA = this.options.matchRGBA, missRGBA = this.options.missRGBA;
-        if (matchRGBA !== null) {
-            var match_r = matchRGBA[0], match_g = matchRGBA[1], match_b = matchRGBA[2], match_a = matchRGBA[3];
+    _setMatchRGBA: function (rgba) {
+        if (rgba !== null && (typeof rgba !== 'object' || typeof rgba.length !== 'number' || rgba.length !== 4)) {
+            throw new Error('L.TileLayer.PixelSwap expected matchRGBA to be RGBA [r,g,b,a] array or else null');
         }
-        if (missRGBA !== null) {
-            var miss_r = missRGBA[0], miss_g = missRGBA[1], miss_b = missRGBA[2], miss_a = missRGBA[3];
+        this.options.matchRGBA = rgba;
+    },
+
+    _setMissRGBA: function (rgba) {
+        if (rgba !== null && (typeof rgba !== 'object' || typeof rgba.length !== 'number' || rgba.length !== 4)) {
+            throw new Error('L.TileLayer.PixelSwap expected missRGBA to be RGBA [r,g,b,a] array or else null');
+        }
+        this.options.missRGBA = rgba;
+    },
+
+    _setPixelCodes: function (pixelcodes) {
+        if (typeof pixelcodes !== 'object' || typeof pixelcodes.length !== 'number') {
+            throw new Error('L.TileLayer.PixelSwap expected pixelCodes to be a list of triplets: [ [r,g,b], [r,g,b], ... ]');
         }
 
-        // go over our pixel-code list and generate the list of integers that we'll use for RGB matching
-        // 1000000*R + 1000*G + B = 123123123 which is an integer, and finding an integer inside an array is a lot faster than finding an array inside an array
-        var pixelcodes = [];
-        for (var i=0, l=this.options.pixelCodes.length; i<l; i++) {
-            var value = 1000000 * this.options.pixelCodes[i][0] + 1000 * this.options.pixelCodes[i][1] + this.options.pixelCodes[i][2];
-            pixelcodes.push(value);
-        }
+        this.options.pixelCodes = pixelcodes;
 
-        // iterate over the pixels (each one is 4 bytes, RGBA)
-        // and see if they are on our list (recall the "addition" thing so we're comparing integers in an array for performance)
-        // per issue #5 catch a failure here, which is likely a cross-domain problem
+        // Rebuild the Set from scratch.  Each RGB triplet is converted to a
+        // single integer hash so membership tests in the pixel loop are O(1).
+        this._pixelCodeSet = new Set();
+        for (var i = 0, l = pixelcodes.length; i < l; i++) {
+            this._pixelCodeSet.add(this._pixelCodeHash(pixelcodes[i][0], pixelcodes[i][1], pixelcodes[i][2]));
+        }
+    },
+
+    // ─── Helpers ─────────────────────────────────────────────────────────────
+
+    // Convert an RGB triplet to a unique integer.
+    // Formula: 1000000*R + 1000*G + B
+    // With R, G, B each in 0–255 the result always fits in a safe integer and
+    // no two distinct (r,g,b) values collide (max value: ~255,255,255 < 2^28).
+    _pixelCodeHash: function (r, g, b) {
+        return 1000000 * r + 1000 * g + b;
+    },
+
+    // Retrieve a 2D canvas context, with a graceful fallback for browsers that
+    // do not support the willReadFrequently hint introduced in newer specs.
+    _getCanvasContext: function (canvas, options) {
+        var context = canvas.getContext('2d', options);
+        // If the browser rejected the options object, retry without it.
+        if (!context && options) {
+            context = canvas.getContext('2d');
+        }
+        if (!context) {
+            throw new Error('L.TileLayer.PixelFilter could not get a 2D canvas context');
+        }
+        return context;
+    },
+
+    // Draw the source Image into a temporary off-screen canvas and extract a
+    // copy of its raw RGBA bytes as a Uint8ClampedArray.
+    // The willReadFrequently hint asks the browser to keep the canvas in CPU
+    // memory (not GPU memory) so getImageData() is faster.
+    _captureRawPixels: function (image, width, height) {
+        var scratchCanvas = document.createElement('canvas');
+        scratchCanvas.width = width;
+        scratchCanvas.height = height;
+
+        var scratchContext = this._getCanvasContext(scratchCanvas, { willReadFrequently: true });
+        scratchContext.drawImage(image, 0, 0, width, height);
+
         try {
-            var pixels = context.getImageData(0, 0, width, height).data;
-        } catch(e) {
-            throw "L.TileLayer.PixelFilter getImageData() failed. Likely a cross-domain issue?";
+            // Copy the pixel data so the scratch canvas can be garbage-collected.
+            return new Uint8ClampedArray(scratchContext.getImageData(0, 0, width, height).data);
+        } catch (error) {
+            console.log(error);
+            throw new Error('L.TileLayer.PixelFilter getImageData() failed. Likely a cross-domain issue?');
         }
-        for(var i = 0, n = pixels.length; i < n; i += 4) {
-            var r = pixels[i  ];
-            var g = pixels[i+1];
-            var b = pixels[i+2];
-            var a = pixels[i+3];
+    },
 
-            // bail condition: if the alpha is 0 then it's already transparent, likely nodata, and we should skip it
-            if (a == 0) {
-                output.data[i  ] = 255;
-                output.data[i+1] = 255;
-                output.data[i+2] = 255;
-                output.data[i+3] = 0;
+    // Read the raw pixel buffer stored on a tile, apply the current filter
+    // rules, and paint the result into the tile's visible canvas.
+    // This is called both on first load and whenever filter settings change.
+    _renderFilteredTile: function (tile) {
+        // Guard: nothing to do if the tile has no cached raw pixels yet.
+        if (!tile || !tile._pixelFilterRaw) {
+            return;
+        }
+
+        var width = tile.width;
+        var height = tile.height;
+        var context = this._getCanvasContext(tile);
+
+        // createImageData allocates a fresh zeroed RGBA buffer for the output.
+        var output = context.createImageData(width, height);
+        var source = tile._pixelFilterRaw;   // original pixels — never mutated
+        var target = output.data;             // output pixels — written below
+
+        // Snapshot option values to avoid repeated property lookups in the loop.
+        var pixelCodeSet = this._pixelCodeSet;
+        var filterByCodes = pixelCodeSet.size > 0; // false → every opaque pixel matches
+        var matchRGBA = this.options.matchRGBA;
+        var missRGBA = this.options.missRGBA;
+
+        // Iterate over every pixel (4 bytes each: R, G, B, A).
+        for (var i = 0, n = source.length; i < n; i += 4) {
+            var r = source[i];
+            var g = source[i + 1];
+            var b = source[i + 2];
+            var a = source[i + 3];
+
+            // Fully transparent pixels are nodata / outside the dataset boundary.
+            // Keep them transparent regardless of any filter setting.
+            if (a === 0) {
+                target[i]     = 255;
+                target[i + 1] = 255;
+                target[i + 2] = 255;
+                target[i + 3] = 0;
                 continue;
             }
 
-            // default to matching, so that if we are not in fact filtering by code it's an automatic hit
-            // number matching trick: 1000000*R + 1000*G + 1*B = 123,123,123 a simple number that either is or isn't on the list
+            // Determine whether this pixel's color is in the pixelCodes list.
+            // When no codes are configured (filterByCodes === false) every pixel
+            // is considered a match, so matchRGBA applies universally.
             var match = true;
-            if (pixelcodes.length) {
-                var sum = 1000000 * r + 1000 * g + b;
-                if (-1 === pixelcodes.indexOf(sum)) match = false;
+            if (filterByCodes) {
+                match = pixelCodeSet.has(this._pixelCodeHash(r, g, b));
             }
 
-            // did it match? either way we push a R, a G, and a B onto the image blob
-            // if the target RGBA is a null, then we push exactly the same RGBA as we found in the source pixel
-            output.data[i  ] = match ? (matchRGBA===null ? r : match_r) : (missRGBA===null ? r : miss_r);
-            output.data[i+1] = match ? (matchRGBA===null ? g : match_g) : (missRGBA===null ? g : miss_g);
-            output.data[i+2] = match ? (matchRGBA===null ? b : match_b) : (missRGBA===null ? b : miss_b);
-            output.data[i+3] = match ? (matchRGBA===null ? a : match_a) : (missRGBA===null ? a : miss_a);
+            // Choose the output color for this pixel.
+            // A null RGBA option means "pass through the original channel value".
+            var rgba = match ? matchRGBA : missRGBA;
+            target[i]     = rgba === null ? r : rgba[0];
+            target[i + 1] = rgba === null ? g : rgba[1];
+            target[i + 2] = rgba === null ? b : rgba[2];
+            target[i + 3] = rgba === null ? a : rgba[3];
         }
 
-        // write the image back to the canvas, and assign its base64 back into the on-screen tile to visualize the change
-        // tag the tile as having already been updated, so we don't process a 'load' event again and re-process a tile that surely won't match any target RGB codes, in an infinite loop!
+        // Commit the filtered pixel buffer to the visible canvas.
         context.putImageData(output, 0, 0);
-        imgelement.setAttribute('data-PixelFilterDone', true);
-        imgelement.src = canvas.toDataURL();
+    },
+
+    // Walk every tile currently tracked by Leaflet and repaint it with the
+    // current filter settings.  Called after any filter option changes so
+    // visible tiles update immediately without reloading from the server.
+    _refilterVisibleTiles: function () {
+        if (!this._tiles) {
+            return;
+        }
+
+        for (var key in this._tiles) {
+            // Skip inherited properties from the prototype chain.
+            if (!Object.prototype.hasOwnProperty.call(this._tiles, key)) {
+                continue;
+            }
+
+            var tileRecord = this._tiles[key];
+            if (tileRecord && tileRecord.el) {
+                this._renderFilteredTile(tileRecord.el);
+            }
+        }
+    },
+
+    // Delete the cached raw pixel buffer from a tile when Leaflet evicts it.
+    // Without this, the Uint8ClampedArray (up to ~768 KB per 256×256 tile at
+    // 4 bytes/pixel) would stay in memory long after the tile left the screen.
+    _disposeTile: function (tile) {
+        if (!tile) {
+            return;
+        }
+        delete tile._pixelFilterRaw;
     }
 });
