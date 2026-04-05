@@ -55,15 +55,15 @@ L.TileLayer.PixelFilter = L.TileLayer.extend({
         }, options);
 
         L.TileLayer.prototype.initialize.call(this, url, options);
-        L.setOptions(this, options);
 
         // _pixelCodeSet is the Set-based lookup structure built from pixelCodes.
         // It is rebuilt whenever pixelCodes changes via _setPixelCodes().
+        // Initialise it before calling _setPixelCodes() below.
         this._pixelCodeSet = new Set();
 
         // Validate and store initial filter values using the private setters.
-        // The public setters also trigger a repaint, which is unnecessary here
-        // because no tiles exist yet.
+        // The private setters validate without triggering a repaint (no tiles
+        // exist yet) whereas the public setters also call _refilterVisibleTiles.
         this._setMatchRGBA(this.options.matchRGBA);
         this._setMissRGBA(this.options.missRGBA);
         this._setPixelCodes(this.options.pixelCodes);
@@ -161,22 +161,34 @@ L.TileLayer.PixelFilter = L.TileLayer.extend({
     // ─── Private setters (validate only, no repaint) ─────────────────────────
 
     _setMatchRGBA: function (rgba) {
-        if (rgba !== null && (typeof rgba !== 'object' || typeof rgba.length !== 'number' || rgba.length !== 4)) {
-            throw new Error('L.TileLayer.PixelSwap expected matchRGBA to be RGBA [r,g,b,a] array or else null');
-        }
+        this._validateRGBA(rgba, 'matchRGBA');
         this.options.matchRGBA = rgba;
     },
 
     _setMissRGBA: function (rgba) {
-        if (rgba !== null && (typeof rgba !== 'object' || typeof rgba.length !== 'number' || rgba.length !== 4)) {
-            throw new Error('L.TileLayer.PixelSwap expected missRGBA to be RGBA [r,g,b,a] array or else null');
-        }
+        this._validateRGBA(rgba, 'missRGBA');
         this.options.missRGBA = rgba;
+    },
+
+    // Shared validation for matchRGBA / missRGBA values.
+    // Accepts null (pass-through) or a four-element array of integers 0–255.
+    _validateRGBA: function (rgba, name) {
+        if (rgba === null) {
+            return;
+        }
+        if (typeof rgba !== 'object' || typeof rgba.length !== 'number' || rgba.length !== 4) {
+            throw new Error('L.TileLayer.PixelFilter expected ' + name + ' to be RGBA [r,g,b,a] array or else null');
+        }
+        for (var i = 0; i < 4; i++) {
+            if (typeof rgba[i] !== 'number' || rgba[i] < 0 || rgba[i] > 255 || (rgba[i] % 1 !== 0)) {
+                throw new Error('L.TileLayer.PixelFilter expected each channel of ' + name + ' to be an integer in 0–255');
+            }
+        }
     },
 
     _setPixelCodes: function (pixelcodes) {
         if (typeof pixelcodes !== 'object' || typeof pixelcodes.length !== 'number') {
-            throw new Error('L.TileLayer.PixelSwap expected pixelCodes to be a list of triplets: [ [r,g,b], [r,g,b], ... ]');
+            throw new Error('L.TileLayer.PixelFilter expected pixelCodes to be a list of triplets: [ [r,g,b], [r,g,b], ... ]');
         }
 
         this.options.pixelCodes = pixelcodes;
@@ -185,18 +197,23 @@ L.TileLayer.PixelFilter = L.TileLayer.extend({
         // single integer hash so membership tests in the pixel loop are O(1).
         this._pixelCodeSet = new Set();
         for (var i = 0, l = pixelcodes.length; i < l; i++) {
-            this._pixelCodeSet.add(this._pixelCodeHash(pixelcodes[i][0], pixelcodes[i][1], pixelcodes[i][2]));
+            var triplet = pixelcodes[i];
+            if (!Array.isArray(triplet) || triplet.length !== 3 ||
+                    typeof triplet[0] !== 'number' || typeof triplet[1] !== 'number' || typeof triplet[2] !== 'number') {
+                throw new Error('L.TileLayer.PixelFilter expected each pixelCode entry to be a numeric [r,g,b] triplet');
+            }
+            this._pixelCodeSet.add(this._pixelCodeHash(triplet[0], triplet[1], triplet[2]));
         }
     },
 
     // ─── Helpers ─────────────────────────────────────────────────────────────
 
-    // Convert an RGB triplet to a unique integer.
-    // Formula: 1000000*R + 1000*G + B
-    // With R, G, B each in 0–255 the result always fits in a safe integer and
-    // no two distinct (r,g,b) values collide (max value: ~255,255,255 < 2^28).
+    // Convert an RGB triplet to a unique integer via bitwise packing.
+    // Formula: (R << 16) | (G << 8) | B
+    // With R, G, B each in 0–255 the result is a 24-bit integer and no two
+    // distinct valid (r,g,b) values can collide.
     _pixelCodeHash: function (r, g, b) {
-        return 1000000 * r + 1000 * g + b;
+        return (r << 16) | (g << 8) | b;
     },
 
     // Retrieve a 2D canvas context, with a graceful fallback for browsers that
@@ -229,7 +246,7 @@ L.TileLayer.PixelFilter = L.TileLayer.extend({
             // Copy the pixel data so the scratch canvas can be garbage-collected.
             return new Uint8ClampedArray(scratchContext.getImageData(0, 0, width, height).data);
         } catch (error) {
-            console.log(error);
+            console.error(error);
             throw new Error('L.TileLayer.PixelFilter getImageData() failed. Likely a cross-domain issue?');
         }
     },
@@ -254,9 +271,14 @@ L.TileLayer.PixelFilter = L.TileLayer.extend({
 
         // Snapshot option values to avoid repeated property lookups in the loop.
         var pixelCodeSet = this._pixelCodeSet;
-        var filterByCodes = pixelCodeSet.size > 0; // false → every opaque pixel matches
+        // When pixelCodes is empty every opaque pixel is treated as a match,
+        // so missRGBA will never be applied.  Warn if the caller set it anyway.
+        var filterByCodes = pixelCodeSet.size > 0;
         var matchRGBA = this.options.matchRGBA;
         var missRGBA = this.options.missRGBA;
+        if (!filterByCodes && missRGBA !== null) {
+            console.warn('L.TileLayer.PixelFilter: missRGBA is set but pixelCodes is empty — missRGBA has no effect because every opaque pixel is treated as a match.');
+        }
 
         // Iterate over every pixel (4 bytes each: R, G, B, A).
         for (var i = 0, n = source.length; i < n; i += 4) {
@@ -267,11 +289,8 @@ L.TileLayer.PixelFilter = L.TileLayer.extend({
 
             // Fully transparent pixels are nodata / outside the dataset boundary.
             // Keep them transparent regardless of any filter setting.
+            // target[] is already zeroed by createImageData, so no assignment needed.
             if (a === 0) {
-                target[i]     = 255;
-                target[i + 1] = 255;
-                target[i + 2] = 255;
-                target[i + 3] = 0;
                 continue;
             }
 
